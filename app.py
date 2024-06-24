@@ -2,7 +2,6 @@ import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
 import numpy as np
-import random
 
 # Streamlit 앱 설정
 st.title('주식 시가 총액 크기 비교')
@@ -35,25 +34,27 @@ if tickers:
         sizes = [market_caps[ticker] for ticker in tickers if ticker in market_caps]
         labels = [ticker for ticker in tickers if ticker in market_caps]
 
+        # 시가 총액 순으로 정렬
+        sorted_indices = np.argsort(sizes)[::-1]
+        sizes = [sizes[i] for i in sorted_indices]
+        labels = [labels[i] for i in sorted_indices]
+
         max_size = max(sizes)
         max_circle_diameter = plt.gcf().get_size_inches()[0] * plt.gcf().dpi / 5  # 화면 전체 크기의 5분의 1
 
         scaled_sizes = [(size / max_size) * max_circle_diameter**2 for size in sizes]
         colors = [plt.cm.tab20(i / len(scaled_sizes)) for i in range(len(scaled_sizes))]
 
-        # 중심을 기준으로 원을 배치
-        center_x, center_y = 0, 0
-        radii = np.linspace(0.1, 1, len(scaled_sizes))  # 중심으로부터의 거리
-        angles = np.linspace(0, 2 * np.pi, len(scaled_sizes), endpoint=False)  # 각도
-
-        x = center_x + radii * np.cos(angles)
-        y = center_y + radii * np.sin(angles)
+        # 가로선상에 위치 설정
+        gap = 1.2  # 각 원 사이의 간격 조정
+        x_positions = np.arange(len(scaled_sizes)) * gap
+        y_position = [0] * len(scaled_sizes)
         
-        ax.scatter(x, y, s=scaled_sizes, c=colors, alpha=0.5)
+        ax.scatter(x_positions, y_position, s=scaled_sizes, c=colors, alpha=0.5)
         
         # 라벨 추가
         for i, label in enumerate(labels):
-            ax.text(x[i], y[i], label, horizontalalignment='center', verticalalignment='center')
+            ax.text(x_positions[i], y_position[i], label, horizontalalignment='center', verticalalignment='center')
 
         ax.set_aspect('equal', 'box')
         plt.axis('off')
