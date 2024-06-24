@@ -1,6 +1,8 @@
 import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
+import numpy as np
+import random
 
 # Streamlit 앱 설정
 st.title('주식 시가 총액 크기 비교')
@@ -37,12 +39,14 @@ if tickers:
         max_circle_diameter = plt.gcf().get_size_inches()[0] * plt.gcf().dpi / 5  # 화면 전체 크기의 5분의 1
 
         scaled_sizes = [(size / max_size) * max_circle_diameter**2 for size in sizes]
+        colors = [plt.cm.tab20(i / len(scaled_sizes)) for i in range(len(scaled_sizes))]
 
         # 원의 위치를 랜덤하게 생성
-        x = range(len(sizes))
-        y = [1] * len(scaled_sizes)
+        angle = np.linspace(0, 2 * np.pi, len(sizes), endpoint=False)
+        x = np.cos(angle)
+        y = np.sin(angle)
         
-        ax.scatter(x, y, s=scaled_sizes, alpha=0.5)
+        ax.scatter(x, y, s=scaled_sizes, c=colors, alpha=0.5)
         
         # 라벨 추가
         for i, label in enumerate(labels):
