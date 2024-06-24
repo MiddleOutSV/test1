@@ -41,10 +41,13 @@ if tickers:
         scaled_sizes = [(size / max_size) * max_circle_diameter**2 for size in sizes]
         colors = [plt.cm.tab20(i / len(scaled_sizes)) for i in range(len(scaled_sizes))]
 
-        # 원의 위치를 랜덤하게 생성
-        angle = np.linspace(0, 2 * np.pi, len(sizes), endpoint=False)
-        x = np.cos(angle)
-        y = np.sin(angle)
+        # 중심을 기준으로 원을 배치
+        center_x, center_y = 0, 0
+        radii = np.linspace(0.1, 1, len(scaled_sizes))  # 중심으로부터의 거리
+        angles = np.linspace(0, 2 * np.pi, len(scaled_sizes), endpoint=False)  # 각도
+
+        x = center_x + radii * np.cos(angles)
+        y = center_y + radii * np.sin(angles)
         
         ax.scatter(x, y, s=scaled_sizes, c=colors, alpha=0.5)
         
@@ -52,6 +55,7 @@ if tickers:
         for i, label in enumerate(labels):
             ax.text(x[i], y[i], label, horizontalalignment='center', verticalalignment='center')
 
+        ax.set_aspect('equal', 'box')
         plt.axis('off')
         st.pyplot(fig)
     else:
