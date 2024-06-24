@@ -7,40 +7,29 @@ def get_market_cap(ticker):
     stock = yf.Ticker(ticker)
     return stock.info['marketCap']
 
-def visualize_market_caps(tickers):
-    market_caps = []
-    for ticker in tickers:
-        try:
-            market_cap = get_market_cap(ticker)
-            market_caps.append((ticker, market_cap))
-        except:
-            st.warning(f"Could not fetch data for {ticker}")
+import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
+
+def visualize_market_caps(tickers, market_caps):
+    fig, ax = plt.subplots(figsize=(12, 6))
     
-    market_caps.sort(key=lambda x: x[1], reverse=True)
+    max_cap = max(market_caps)
+    max_radius = 0.4  # 최대 원의 반지름
     
-    fig, ax = plt.subplots(figsize=(10, 2))
-    max_size = fig.get_size_inches()[0] * fig.dpi * 0.2  # 화면의 5분의 1
+    x_position = 0
+    for ticker, cap in zip(tickers, market_caps):
+        radius = (cap / max_cap) * max_radius
+        circle = Circle((x_position, 0), radius, fill=True, alpha=0.6)
+        ax.add_patch(circle)
+        ax.text(x_position, -max_radius - 0.05, ticker, ha='center')
+        x_position += 2 * max_radius + 0.1  # 원 사이의 간격
     
-    circles = []
-    for i, (ticker, market_cap) in enumerate(market_caps):
-        size = (market_cap / market_caps[0][1]) * max_size
-        color = f'#{random.randint(0, 0xFFFFFF):06x}'
-        circle = plt.Circle((0, 0), size/2, color=color, alpha=0.7)
-        circles.append((circle, size))
-    
-    total_width = sum(size for _, size in circles) + (len(circles) - 1) * max_size * 0.05
-    start_x = -total_width / 2
-    
-    for (circle, size), (ticker, _) in zip(circles, market_caps):
-        circle.center = (start_x + size/2, 0)
-        ax.add_artist(circle)
-        ax.text(start_x + size/2, -max_size/2 - 10, ticker, ha='center', va='top')
-        start_x += size + max_size * 0.05
-    
-    ax.set_xlim(-total_width/2 - max_size*0.1, total_width/2 + max_size*0.1)
-    ax.set_ylim(-max_size/2 - 20, max_size/2)
+    ax.set_xlim(-max_radius, x_position - max_radius)
+    ax.set_ylim(-max_radius - 0.2, max_radius)
+    ax.set_aspect('equal')  # 원이 찌그러지지 않도록 비율 설정
     ax.axis('off')
     
+    plt.title('주식 시가 총액 크기 비교')
     st.pyplot(fig)
 
 st.title('주식 시가총액 비교 시각화')
