@@ -50,11 +50,11 @@ if tickers:
         x_positions = np.arange(len(scaled_sizes)) * gap
         y_position = [0] * len(scaled_sizes)
         
-        ax.scatter(x_positions, y_position, s=scaled_sizes, c=colors, alpha=0.5)
-        
-        # 라벨 추가
-        for i, label in enumerate(labels):
-            ax.text(x_positions[i], y_position[i], label, horizontalalignment='center', verticalalignment='center')
+        # 원 그리기
+        for x, y, size, color, label in zip(x_positions, y_position, scaled_sizes, colors, labels):
+            circle = plt.Circle((x, y), np.sqrt(size / np.pi), color=color, alpha=0.5)
+            ax.add_artist(circle)
+            ax.text(x, y, label, horizontalalignment='center', verticalalignment='center')
 
         ax.set_aspect('equal', 'box')
         plt.axis('off')
