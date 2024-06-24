@@ -1,43 +1,52 @@
 import streamlit as st
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 import yfinance as yf
+import matplotlib.pyplot as plt
 import random
 
-# 주식 티커 입력
-tickers = st.text_input('Enter stock tickers (comma separated):', 'AAPL, MSFT, GOOGL, AMZN')
+def get_market_cap(ticker):
+    stock = yf.Ticker(ticker)
+    return stock.info['marketCap']
 
-# 시가 총액 데이터 가져오기
-tickers_list = tickers.split(',')
-data = yf.Tickers(tickers_list)
-market_caps = {ticker: data.tickers[ticker].info['marketCap'] for ticker in tickers_list}
-sorted_market_caps = dict(sorted(market_caps.items(), key=lambda item: item[1], reverse=True))
+def visualize_market_caps(tickers):
+    market_caps = []
+    for ticker in tickers:
+        try:
+            market_cap = get_market_cap(ticker)
+            market_caps.append((ticker, market_cap))
+        except:
+            st.warning(f"Could not fetch data for {ticker}")
+    
+    market_caps.sort(key=lambda x: x[1], reverse=True)
+    
+    fig, ax = plt.subplots(figsize=(10, 2))
+    max_size = fig.get_size_inches()[0] * fig.dpi * 0.2  # 화면의 5분의 1
+    
+    circles = []
+    for i, (ticker, market_cap) in enumerate(market_caps):
+        size = (market_cap / market_caps[0][1]) * max_size
+        color = f'#{random.randint(0, 0xFFFFFF):06x}'
+        circle = plt.Circle((0, 0), size/2, color=color, alpha=0.7)
+        circles.append((circle, size))
+    
+    total_width = sum(size for _, size in circles) + (len(circles) - 1) * max_size * 0.05
+    start_x = -total_width / 2
+    
+    for (circle, size), (ticker, _) in zip(circles, market_caps):
+        circle.center = (start_x + size/2, 0)
+        ax.add_artist(circle)
+        ax.text(start_x + size/2, -max_size/2 - 10, ticker, ha='center', va='top')
+        start_x += size + max_size * 0.05
+    
+    ax.set_xlim(-total_width/2 - max_size*0.1, total_width/2 + max_size*0.1)
+    ax.set_ylim(-max_size/2 - 20, max_size/2)
+    ax.axis('off')
+    
+    st.pyplot(fig)
 
-# 원 크기 계산
-max_diameter = st.sidebar.slider("Maximum diameter (as fraction of screen width):", 0.1, 0.5, 0.2)
-screen_width = st.sidebar.number_input("Screen width in pixels:", 800)
-max_radius = (max_diameter * screen_width) / 2
+st.title('주식 시가총액 비교 시각화')
 
-max_market_cap = max(sorted_market_caps.values())
-diameters = {ticker: (market_cap / max_market_cap) * max_diameter * screen_width for ticker, market_cap in sorted_market_caps.items()}
-radii = {ticker: diameter / 2 for ticker, diameter in diameters.items()}
+tickers_input = st.text_input('ticker 심볼들을 쉼표로 구분하여 입력하세요 (예: AAPL,MSFT,GOOGL):')
 
-# Plotting
-fig, ax = plt.subplots(figsize=(10, 5))
-current_x = 0
-
-for ticker in sorted_market_caps.keys():
-    radius = radii[ticker]
-    color = (random.random(), random.random(), random.random())
-    circle = plt.Circle((current_x + radius, radius), radius, color=color, alpha=0.6)
-    ax.add_artist(circle)
-    ax.text(current_x + radius, radius, ticker, horizontalalignment='center', verticalalignment='center')
-    current_x += radius * 2 + 10  # Adding a small gap between circles
-
-ax.set_xlim(0, current_x)
-ax.set_ylim(0, max_radius * 2)
-ax.set_aspect('equal', 'box')
-ax.axis('off')
-
-st.pyplot(fig)
+if tickers_input:
+    tickers = [ticker.strip() for ticker in tickers_input.split(',')]
+    visualize_market_caps(tickers)
