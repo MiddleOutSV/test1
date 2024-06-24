@@ -1,27 +1,42 @@
 import streamlit as st
 import yfinance as yf
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
 import random
 
 def get_market_cap(ticker):
-    stock = yf.Ticker(ticker)
-    return stock.info['marketCap']
+    try:
+        stock = yf.Ticker(ticker)
+        return stock.info['marketCap']
+    except:
+        st.warning(f"Could not fetch data for {ticker}")
+        return None
 
-import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
+def visualize_market_caps(tickers):
+    market_caps = []
+    valid_tickers = []
+    for ticker in tickers:
+        cap = get_market_cap(ticker)
+        if cap is not None:
+            market_caps.append(cap)
+            valid_tickers.append(ticker)
+    
+    if not market_caps:
+        st.error("No valid market cap data available.")
+        return
 
-def visualize_market_caps(tickers, market_caps):
     fig, ax = plt.subplots(figsize=(12, 6))
     
     max_cap = max(market_caps)
     max_radius = 0.4  # 최대 원의 반지름
     
     x_position = 0
-    for ticker, cap in zip(tickers, market_caps):
+    for ticker, cap in zip(valid_tickers, market_caps):
         radius = (cap / max_cap) * max_radius
-        circle = Circle((x_position, 0), radius, fill=True, alpha=0.6)
+        color = f'#{random.randint(0, 0xFFFFFF):06x}'
+        circle = Circle((x_position, 0), radius, fill=True, alpha=0.6, color=color)
         ax.add_patch(circle)
-        ax.text(x_position, -max_radius - 0.05, ticker, ha='center')
+        ax.text(x_position, -max_radius - 0.05, f"{ticker}\n${cap/1e9:.1f}B", ha='center', va='top')
         x_position += 2 * max_radius + 0.1  # 원 사이의 간격
     
     ax.set_xlim(-max_radius, x_position - max_radius)
