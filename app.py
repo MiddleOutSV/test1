@@ -1,65 +1,43 @@
 import streamlit as st
-import yfinance as yf
 import matplotlib.pyplot as plt
+import pandas as pd
 import numpy as np
+import yfinance as yf
+import random
 
-# Streamlit 앱 설정
-st.title('주식 시가 총액 크기 비교')
+# 주식 티커 입력
+tickers = st.text_input('Enter stock tickers (comma separated):', 'AAPL, MSFT, GOOGL, AMZN')
 
-# 사용자 입력 받기
-tickers = st.text_input('주식 티커를 콤마로 구분하여 입력하세요', 'AAPL,MSFT,GOOGL,AMZN,TSLA')
+# 시가 총액 데이터 가져오기
+tickers_list = tickers.split(',')
+data = yf.Tickers(tickers_list)
+market_caps = {ticker: data.tickers[ticker].info['marketCap'] for ticker in tickers_list}
+sorted_market_caps = dict(sorted(market_caps.items(), key=lambda item: item[1], reverse=True))
 
-# 주식 데이터를 가져오고 시가 총액 계산
-def get_market_caps(tickers):
-    market_caps = {}
-    for ticker in tickers:
-        try:
-            stock = yf.Ticker(ticker)
-            market_cap = stock.info['marketCap']
-            if market_cap:
-                market_caps[ticker] = market_cap
-            else:
-                st.warning(f'{ticker}의 시가 총액 정보를 가져올 수 없습니다.')
-        except Exception as e:
-            st.error(f'{ticker}의 데이터를 가져오는 중 오류가 발생했습니다: {e}')
-    return market_caps
+# 원 크기 계산
+max_diameter = st.sidebar.slider("Maximum diameter (as fraction of screen width):", 0.1, 0.5, 0.2)
+screen_width = st.sidebar.number_input("Screen width in pixels:", 800)
+max_radius = (max_diameter * screen_width) / 2
 
-if tickers:
-    tickers = [ticker.strip().upper() for ticker in tickers.split(',')]
-    market_caps = get_market_caps(tickers)
+max_market_cap = max(sorted_market_caps.values())
+diameters = {ticker: (market_cap / max_market_cap) * max_diameter * screen_width for ticker, market_cap in sorted_market_caps.items()}
+radii = {ticker: diameter / 2 for ticker, diameter in diameters.items()}
 
-    # 시가 총액 시각화
-    if market_caps:
-        fig, ax = plt.subplots()
-        sizes = [market_caps[ticker] for ticker in tickers if ticker in market_caps]
-        labels = [ticker for ticker in tickers if ticker in market_caps]
+# Plotting
+fig, ax = plt.subplots(figsize=(10, 5))
+current_x = 0
 
-        # 시가 총액 순으로 정렬
-        sorted_indices = np.argsort(sizes)[::-1]
-        sizes = [sizes[i] for i in sorted_indices]
-        labels = [labels[i] for i in sorted_indices]
+for ticker in sorted_market_caps.keys():
+    radius = radii[ticker]
+    color = (random.random(), random.random(), random.random())
+    circle = plt.Circle((current_x + radius, radius), radius, color=color, alpha=0.6)
+    ax.add_artist(circle)
+    ax.text(current_x + radius, radius, ticker, horizontalalignment='center', verticalalignment='center')
+    current_x += radius * 2 + 10  # Adding a small gap between circles
 
-        max_size = max(sizes)
-        max_circle_diameter = plt.gcf().get_size_inches()[0] * plt.gcf().dpi / 5  # 화면 전체 크기의 5분의 1
+ax.set_xlim(0, current_x)
+ax.set_ylim(0, max_radius * 2)
+ax.set_aspect('equal', 'box')
+ax.axis('off')
 
-        scaled_sizes = [(size / max_size) * max_circle_diameter**2 for size in sizes]
-        colors = [plt.cm.tab20(i / len(scaled_sizes)) for i in range(len(scaled_sizes))]
-
-        # 가로선상에 위치 설정
-        gap = 1.2  # 각 원 사이의 간격 조정
-        x_positions = np.arange(len(scaled_sizes)) * gap
-        y_position = [0] * len(scaled_sizes)
-        
-        # 원 그리기
-        for x, y, size, color, label in zip(x_positions, y_position, scaled_sizes, colors, labels):
-            circle = plt.Circle((x, y), np.sqrt(size / np.pi), color=color, alpha=0.5)
-            ax.add_artist(circle)
-            ax.text(x, y, label, horizontalalignment='center', verticalalignment='center')
-
-        ax.set_aspect('equal', 'box')
-        plt.axis('off')
-        st.pyplot(fig)
-    else:
-        st.info('유효한 티커를 입력하세요.')
-else:
-    st.info('주식 티커를 입력하세요.')
+st.pyplot(fig)
